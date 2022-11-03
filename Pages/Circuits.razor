@@ -1,0 +1,78 @@
+@page "/circuits"
+@using F1Data.Models
+@inject HttpClient Http
+
+<PageTitle>Circuits</PageTitle>
+
+@if (circuits == null && apiError == false)
+{
+    <p><em>Loading...</em></p>
+}
+else if (apiError == true)
+{
+    <p><em>@errorMessage</em></p>
+    <a href="circuits">retry</a>
+}
+else
+{
+    <form>
+        <input class="form-control" placeholder="name" @bind="nameFilter" @bind:event="oninput"/>
+        <input class="form-control" placeholder="country" @bind="countryFilter" @bind:event="oninput"/>
+    </form>
+    @if (circuits?.Count > 0)
+    {
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Locality</th>
+                    <th>Country</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var circuit in circuits)
+                {
+                    @if ((circuit.circuitName != null && circuit.Location?.country != null) &&
+                        (circuit.circuitName.ToLower().Contains(nameFilter.ToLower()) &&
+                        circuit.Location.country.ToLower().Contains(countryFilter.ToLower())))
+                    {
+                        <tr>
+                            <td><a href="@circuit.url" target="_blank">@circuit.circuitName</a></td>
+                            <td>@circuit.Location?.locality</td>
+                            <td>@circuit.Location?.country</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private string nameFilter = String.Empty;
+    private string countryFilter = String.Empty;
+    private bool apiError = false;
+    private string baseUrl = "https://ergast.com/api/f1";
+    private string? errorMessage;
+    private List<Circuit>? circuits;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var circuitsUrl = $"{baseUrl}/circuits.json?limit=100";
+            var circuitData = await Http.GetFromJsonAsync<CircuitData>(circuitsUrl);
+            circuits = circuitData?.MRData?.CircuitTable?.Circuits;
+        }
+        catch (HttpRequestException)
+        {
+            apiError = true;
+            errorMessage = "Problem fetching data.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            apiError = true;
+            errorMessage = "Problem parsing data.";
+        }
+    }
+}

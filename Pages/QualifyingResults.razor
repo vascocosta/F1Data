@@ -1,0 +1,178 @@
+@page "/qualifyingresults"
+@using F1Data.Models
+@inject HttpClient Http
+
+<PageTitle>Qualifying Results</PageTitle>
+
+@if (qualifyingResults == null && apiError == false)
+{
+    <p><em>Loading...</em></p>
+}
+else if (apiError == true)
+{
+    <p><em>@errorMessage</em></p>
+    <a href="qualifyingresults">retry</a>
+}
+else
+{
+    <form>
+        <select class="form-select" @onchange="ChangeYear">
+            @for (int i = 2022; i >= 2003; i--)
+            {
+                <option value="@i">@i</option>    
+            }
+        </select>
+        <select class="form-select" @onchange="ChangeRound">
+            @if (races?.Count > 0)
+            {
+                @for (int i = @races.Count; i >= 1; i--)
+                {
+                    if (raceName?.ToLowerInvariant() == races[i-1].raceName?.ToLowerInvariant())
+                    {
+                        <option value="@i" selected>@races[i-1].raceName</option>
+                    }
+                    /*
+                    if (i == 1)
+                    {
+                        <option value="@i" selected>@races[i-1].raceName</option>
+                    }
+                    */
+                    else
+                    {
+                        <option value="@i">@races[i-1].raceName</option>
+                    }
+                }
+            }
+        </select>
+    </form>
+    @if (qualifyingResults?.Count > 0)
+    {
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    <th>Pos</th>
+                    <th>Driver</th>
+                    <th>Q1</th>
+                    <th>Q2</th>
+                    <th>Q3</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var qualifyingResult in qualifyingResults)
+                {
+                    @if (qualifyingResult.Driver != null)
+                    {
+                        <tr>
+                            <td>@qualifyingResult.position</td>
+                            <td>@qualifyingResult.Driver.givenName @qualifyingResult.Driver.familyName</td>
+                            <td>@qualifyingResult.Q1</td>
+                            <td>@qualifyingResult.Q2</td>
+                            <td>@qualifyingResult.Q3</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="my-4">
+            <p>No data available for that round.</p>
+        </div>
+    }
+}
+
+@code {
+    private bool apiError = false;
+    private string baseUrl = "https://ergast.com/api/f1";
+    private string? errorMessage;
+    private List<QualifyingResult>? qualifyingResults;
+    private string? raceName;
+    private List<Race>? races;
+    private string round = "last";
+    private string year = "2022";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ChangeYear(new ChangeEventArgs());
+    }
+
+    private async Task ChangeRound(ChangeEventArgs e)
+    {
+        if (e.Value != null)
+        {
+            round = (string)e.Value;
+        }
+        else
+        {
+            round = "last";
+        }
+        try
+        {
+            var qualifyingUrl = $"{baseUrl}/{year}/{round}/qualifying.json";
+            var qualifyingData = await Http.GetFromJsonAsync<QualifyingData>(qualifyingUrl);
+            if (qualifyingData?.MRData?.RaceTable?.Races?.Count > 0)
+            {
+                qualifyingResults = qualifyingData?.MRData?.RaceTable?.Races?[0]?.QualifyingResults;
+            }
+            else
+            {
+                qualifyingResults = new List<QualifyingResult>();
+            }
+        }
+        catch (HttpRequestException)
+        {
+            apiError = true;
+            errorMessage = "Problem fetching data.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            apiError = true;
+            errorMessage = "Problem parsing data.";
+        }
+    }
+
+    private async Task ChangeYear(ChangeEventArgs e)
+    {
+        if (e == null)
+        {
+            year = "2022";
+        }
+        else if (e.Value != null)
+        {
+            year = (string)e.Value;
+        }
+        List<Task> tasks = new List<Task>();
+        try
+        {
+            var seasonUrl = $"{baseUrl}/{year}.json";
+            var qualifyingUrl = $"{baseUrl}/{year}/last/qualifying.json";
+            tasks.Add(Http.GetFromJsonAsync<SeasonData>(seasonUrl));
+            tasks.Add(Http.GetFromJsonAsync<QualifyingData>(qualifyingUrl));
+            await Task.WhenAll(tasks);
+            var seasonData = ((Task<SeasonData>)tasks[0]).Result;
+            var qualifyingData = ((Task<QualifyingData>)tasks[1]).Result;
+            if (qualifyingData.MRData?.RaceTable?.Races?.Count > 0)
+            {
+                qualifyingResults = qualifyingData?.MRData?.RaceTable?.Races?[0]?.QualifyingResults;
+                raceName = qualifyingData?.MRData.RaceTable.Races[0].raceName;
+            }
+            else
+            {
+                qualifyingResults = new List<QualifyingResult>();
+                raceName = String.Empty;
+            }
+            races = seasonData?.MRData?.RaceTable?.Races;
+        }
+        catch (HttpRequestException)
+        {
+            apiError = true;
+            errorMessage = "Problem fetching data.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            apiError = true;
+            errorMessage = "Problem parsing data.";
+        }
+    }
+}

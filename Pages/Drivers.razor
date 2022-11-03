@@ -1,0 +1,83 @@
+@page "/drivers"
+@using F1Data.Models
+@inject HttpClient Http
+
+<PageTitle>Drivers</PageTitle>
+
+@if (drivers == null && apiError == false)
+{
+    <p><em>Loading...</em></p>
+}
+else if (apiError == true)
+{
+    <p><em>@errorMessage</em></p>
+    <a href="drivers">retry</a>
+}
+else
+{
+    <form>
+        <input class="form-control" placeholder="first name" @bind="firstNameFilter" @bind:event="oninput"/>
+        <input class="form-control" placeholder="last name" @bind="lastNameFilter" @bind:event="oninput"/>
+        <input class="form-control" placeholder="nationality" @bind="nationalityFilter" @bind:event="oninput"/>
+    </form>
+    @if (drivers?.Count > 0)
+    {
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Number</th>
+                    <th>Nationality</th>
+                    <th>DOB</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var driver in drivers)
+                {
+                    @if ((driver.givenName != null && driver.familyName != null && driver.nationality != null) &&
+                        (driver.givenName.ToLower().Contains(firstNameFilter.ToLower()) &&
+                        driver.familyName.ToLower().Contains(lastNameFilter.ToLower()) &&
+                        driver.nationality.ToLower().Contains(nationalityFilter.ToLower())))
+                    {
+                        <tr>
+                            <td><a href="@driver.url" target="_blank">@driver.givenName @driver.familyName</a></td>
+                            <td>@driver.permanentNumber</td>
+                            <td>@driver.nationality</td>
+                            <td>@driver.dateOfBirth</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private bool apiError = false;
+    private string baseUrl = "https://ergast.com/api/f1";
+    private List<Driver>? drivers;
+    private string? errorMessage;
+    private string firstNameFilter = String.Empty;
+    private string lastNameFilter = String.Empty;
+    private string nationalityFilter = String.Empty;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var driversUrl = $"{baseUrl}/drivers.json?limit=1000";
+            var driverData = await Http.GetFromJsonAsync<DriverData>(driversUrl);
+            drivers = driverData?.MRData?.DriverTable?.Drivers;
+        }
+        catch (HttpRequestException)
+        {
+            apiError = true;
+            errorMessage = "Problem fetching data.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            apiError = true;
+            errorMessage = "Problem parsing data.";
+        }
+    }
+}

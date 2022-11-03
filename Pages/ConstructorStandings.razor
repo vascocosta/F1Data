@@ -1,0 +1,301 @@
+@page "/constructorstandings"
+@using F1Data.Models
+@inject HttpClient Http
+
+<PageTitle>Constructor Standings</PageTitle>
+
+@if (constructorStandings == null && apiError == false)
+{
+    <p><em>Loading...</em></p>
+}
+else if (apiError == true)
+{
+    <p><em>@errorMessage</em></p>
+    <a href="constructorstandings">retry</a>
+}
+else
+{
+    <form>
+        <select class="form-select" @onchange="ChangeYear">
+            @for (int i = 2022; i >= 1950; i--)
+            {
+                <option value="@i">@i</option>    
+            }
+        </select>
+        <br>
+        <div class="form-check form-switch form-check-inline">
+            <input class="form-check-input" type="checkbox" id="inlineCheckbox1" @onchange="ChangeYear">
+            <label class="form-check-label" for="inlineCheckbox1t">Championship history chart (race by race)*</label>
+        </div>
+    </form>
+    <br>
+    @if (constructorStandings?.Count > 0)
+    {
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    <th>Pos</th>
+                    <th>Constructor</th>
+                    <th>Wins</th>
+                    <th>Points</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var constructorStanding in constructorStandings)
+                {
+                    @if (constructorStanding.Constructor != null)
+                    {
+                        <tr>
+                            <td>@constructorStanding.position</td>
+                            <td>@constructorStanding?.Constructor?.name</td>
+                            <td>@constructorStanding?.wins</td>
+                            <td>@constructorStanding?.points</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="my-4">
+            <p>No data available.</p>
+        </div>
+    }
+    var roundNumber = 1;
+    @if (raceByRace && raceStandings != null)
+    {
+        <p>*) These charts are API intensive, use with moderation as your browser makes one request per race. Avoid getting your IP blocked.</p>
+        <img src="https://quickchart.io/chart?height=400&width=900&c=@chartUrl" class="img-fluid" alt="..." />
+        @foreach (var raceStanding in raceStandings)
+        {
+            <h4>Round @roundNumber Standings</h4>
+            @if (raceStanding?.Count > 0)
+            {
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Pos</th>
+                            <th>Constructor</th>
+                            <th>Wins</th>
+                            <th>Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var constructorStanding in raceStanding)
+                        {
+                            @if (constructorStanding.Constructor != null)
+                            {
+                                <tr>
+                                    <td>@constructorStanding.position</td>
+                                    <td>@constructorStanding?.Constructor?.name</td>
+                                    <td>@constructorStanding?.wins</td>
+                                    <td>@constructorStanding?.points</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            }
+            roundNumber++;
+        }
+    }
+}
+
+@code {
+    private bool apiError = false;
+    private string baseUrl = "https://ergast.com/api/f1";
+    private string chartUrl = String.Empty;
+    private List<ConstructorStanding>? constructorStandings;
+    private List<List<ConstructorStanding>?>? raceStandings;
+    private string? errorMessage;
+    public bool raceByRace = false;
+    private string? year = "2022";
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        await ChangeYear(new ChangeEventArgs());
+    }
+
+    private async Task ChangeYear(ChangeEventArgs e)
+    {
+        if (e == null)
+        {
+            year = "2022";
+        }
+        else if (e.Value != null)
+        {
+            try
+            {
+                year = (string)e.Value;
+            }
+            catch (InvalidCastException)
+            {
+                if (raceByRace)
+                {
+                    raceByRace = false;
+                }
+                else
+                {
+                    raceByRace = true;
+                }
+            }
+        }
+        try
+        {
+            var constructorStandingsUrl = $"{baseUrl}/{year}/last/constructorStandings.json";
+            var constructorStandingsData = await Http.GetFromJsonAsync<ConstructorStandingsData>(constructorStandingsUrl);
+            if (constructorStandingsData?.MRData?.StandingsTable?.StandingsLists?.Count > 0)
+            {
+                constructorStandings = constructorStandingsData?.MRData?.StandingsTable?.StandingsLists?[0]?.ConstructorStandings;
+            }
+            else
+            {
+                constructorStandings = new List<ConstructorStanding>();
+            }
+            // Race Standings (one per race)
+            if (raceByRace)
+            {
+                raceStandings = new();
+                List<Task> tasks = new List<Task>();
+                for (int i = 1; i != Convert.ToInt32(constructorStandingsData?.MRData?.StandingsTable?.round) + 1; i++)
+                {
+                    tasks.Add(Http.GetFromJsonAsync<ConstructorStandingsData>($"{baseUrl}/{year}/{i}/constructorStandings.json"));
+                }
+                await Task.WhenAll(tasks);
+                for (int i = 0; i != tasks.Count; i++)
+                {
+                    var raceStandingsData = ((Task<ConstructorStandingsData>)tasks[i]).Result;
+                    if (raceStandingsData?.MRData?.StandingsTable?.StandingsLists?.Count > 0)
+                    {
+                        raceStandings.Add(raceStandingsData?.MRData?.StandingsTable?.StandingsLists?[0]?.ConstructorStandings);
+                    }
+                }
+                string datasetsString = String.Empty;
+                Dictionary<string, string> datasets = new();
+                foreach (var raceStanding in raceStandings)
+                {
+                    if (raceStanding != null) {
+                        foreach (var constructorStanding in raceStanding)
+                        {
+                            var name = constructorStanding.Constructor?.name;
+                            var points = constructorStanding.points;
+                            var color = String.Empty;
+                            var datasetString = "{fill:false,";
+                            if (name != null && points != null)
+                            {
+                                if (datasets.ContainsKey(name))
+                                {
+                                    datasets[name] += points + ",";
+                                }
+                                else
+                                {
+                                    switch (name.ToLowerInvariant())
+                                    {
+                                        case "ferrari":
+                                        color = "#FF2800";
+                                        break;
+                                        case "mercedes":
+                                        color = "#00D2BE";
+                                        break;
+                                        case "red bull":
+                                        color = "#0600EF";
+                                        break;
+                                        case "mclaren":
+                                        color = "#FF8700";
+                                        break;
+                                        case "williams":
+                                        color = "#005AFF";
+                                        break;
+                                        case "alpine f1 team":
+                                        color = "#0090FF";
+                                        break;
+                                        case "haas f1 team":
+                                        color = "#CCCCCC";
+                                        break;
+                                        case "aston martin":
+                                        color = "#006F62";
+                                        break;
+                                        case "alphatauri":
+                                        case "toro rosso":
+                                        color = "#2B4562";
+                                        break;
+                                        case "alfa romeo":
+                                        color = "#900000";
+                                        break;
+                                        case "renault":
+                                        color = "#FFE100";
+                                        break;
+                                        case "racing point":
+                                        color = "#FA96FF";
+                                        break;
+                                        case "force india":
+                                        color = "#19BF00";
+                                        break;
+                                        case "jaguar":
+                                        case "lotus":
+                                        case "lotus f1":
+                                        color = "#004225";
+                                        break;
+                                        case "sauber":
+                                        color = "#C70000";
+                                        break;
+                                        case "brawn":
+                                        color = "#FAFF41";
+                                        break;
+                                        case "toyota":
+                                        color = "#EB0A1E";
+                                        break;
+                                        case "bmw sauber":
+                                        color = "#0950A0";
+                                        break;
+                                        case "benetton":
+                                        color = "#60B3e0";
+                                        break;
+                                        case "jordan":
+                                        color = "#FFF130";
+                                        break;
+                                        case "bar":
+                                        case "honda":
+                                        color = "#CC0000";
+                                        break;
+                                    }
+                                    if (!String.IsNullOrEmpty(color))
+                                    {
+                                        datasetString += $"borderColor:\'{color}\',";
+                                    }
+                                    datasets.Add(name, datasetString + $"label:'{name}',data:[{points},");
+                                }
+                            }
+                        }
+                    }
+                }
+                foreach (KeyValuePair<string, string> kvp in datasets)
+                {
+                    datasets[kvp.Key] += "],},";
+                }
+                foreach (KeyValuePair<string, string> kvp in datasets)
+                {
+                    datasetsString += kvp.Value;
+                }
+                string xString = String.Empty;
+                for (int i = 0; i != raceStandings.Count; i++)
+                {
+                    xString += $"'R{i+1}',";
+                }
+                chartUrl = HttpUtility.UrlEncode($"{{type:'line',data:{{labels:[{xString}],datasets:[{datasetsString}]}}}}");
+            }
+        }
+        catch (HttpRequestException)
+        {
+            apiError = true;
+            errorMessage = "Problem fetching data.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            apiError = true;
+            errorMessage = "Problem parsing data.";
+        }
+    }
+}
