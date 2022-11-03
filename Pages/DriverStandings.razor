@@ -29,41 +29,6 @@ else
         </div>
     </form>
     <br>
-    @if (driverStandings?.Count > 0)
-    {
-        <table class="table table-sm table-striped">
-            <thead>
-                <tr>
-                    <th>Pos</th>
-                    <th>Driver</th>
-                    <th>Constructor</th>
-                    <th>Wins</th>
-                    <th>Points</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var driverStanding in driverStandings)
-                {
-                    @if (driverStanding.Driver != null)
-                    {
-                        <tr>
-                            <td>@driverStanding.position</td>
-                            <td>@driverStanding.Driver.givenName @driverStanding.Driver.familyName</td>
-                            <td>@driverStanding?.Constructors?[0].name</td>
-                            <td>@driverStanding?.wins</td>
-                            <td>@driverStanding?.points</td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
-    }
-    else
-    {
-        <div class="my-4">
-            <p>No data available.</p>
-        </div>
-    }
     var roundNumber = 1;
     @if (raceByRace && raceStandings != null)
     {
@@ -101,6 +66,41 @@ else
             }
             roundNumber++;
         }
+    }
+    @if (driverStandings?.Count > 0)
+    {
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    <th>Pos</th>
+                    <th>Driver</th>
+                    <th>Constructor</th>
+                    <th>Wins</th>
+                    <th>Points</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var driverStanding in driverStandings)
+                {
+                    @if (driverStanding.Driver != null)
+                    {
+                        <tr>
+                            <td>@driverStanding.position</td>
+                            <td>@driverStanding.Driver.givenName @driverStanding.Driver.familyName</td>
+                            <td>@driverStanding?.Constructors?[0].name</td>
+                            <td>@driverStanding?.wins</td>
+                            <td>@driverStanding?.points</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="my-4">
+            <p>No data available.</p>
+        </div>
     }
 }
 

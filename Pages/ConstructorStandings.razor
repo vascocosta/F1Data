@@ -29,39 +29,6 @@ else
         </div>
     </form>
     <br>
-    @if (constructorStandings?.Count > 0)
-    {
-        <table class="table table-sm table-striped">
-            <thead>
-                <tr>
-                    <th>Pos</th>
-                    <th>Constructor</th>
-                    <th>Wins</th>
-                    <th>Points</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var constructorStanding in constructorStandings)
-                {
-                    @if (constructorStanding.Constructor != null)
-                    {
-                        <tr>
-                            <td>@constructorStanding.position</td>
-                            <td>@constructorStanding?.Constructor?.name</td>
-                            <td>@constructorStanding?.wins</td>
-                            <td>@constructorStanding?.points</td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
-    }
-    else
-    {
-        <div class="my-4">
-            <p>No data available.</p>
-        </div>
-    }
     var roundNumber = 1;
     @if (raceByRace && raceStandings != null)
     {
@@ -99,6 +66,39 @@ else
             }
             roundNumber++;
         }
+    }
+    @if (constructorStandings?.Count > 0)
+    {
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    <th>Pos</th>
+                    <th>Constructor</th>
+                    <th>Wins</th>
+                    <th>Points</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var constructorStanding in constructorStandings)
+                {
+                    @if (constructorStanding.Constructor != null)
+                    {
+                        <tr>
+                            <td>@constructorStanding.position</td>
+                            <td>@constructorStanding?.Constructor?.name</td>
+                            <td>@constructorStanding?.wins</td>
+                            <td>@constructorStanding?.points</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="my-4">
+            <p>No data available.</p>
+        </div>
     }
 }
 
