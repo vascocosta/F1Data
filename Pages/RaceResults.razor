@@ -115,7 +115,7 @@ else
         try
         {
             var raceUrl = $"{baseUrl}/{year}/{round}/results.json";
-            var raceData = await Http.GetFromJsonAsync<RaceData>(raceUrl);
+            var raceData = await Http.GetFromJsonAsync<Data>(raceUrl);
             if (raceData?.MRData?.RaceTable?.Races?.Count > 0)
             {
                 raceResults = raceData?.MRData?.RaceTable?.Races?[0]?.Results;
@@ -152,11 +152,11 @@ else
         {
             var seasonUrl = $"{baseUrl}/{year}.json";
             var raceUrl = $"{baseUrl}/{year}/last/results.json";
-            tasks.Add(Http.GetFromJsonAsync<SeasonData>(seasonUrl));
-            tasks.Add(Http.GetFromJsonAsync<RaceData>(raceUrl));
+            tasks.Add(Http.GetFromJsonAsync<Data>(seasonUrl));
+            tasks.Add(Http.GetFromJsonAsync<Data>(raceUrl));
             await Task.WhenAll(tasks);
-            var seasonData = ((Task<SeasonData>)tasks[0]).Result;
-            var raceData = ((Task<RaceData>)tasks[1]).Result;
+            var seasonData = ((Task<Data>)tasks[0]).Result;
+            var raceData = ((Task<Data>)tasks[1]).Result;
             if (raceData?.MRData?.RaceTable?.Races?.Count > 0)
             {
                 raceResults = raceData?.MRData?.RaceTable?.Races?[0]?.Results;

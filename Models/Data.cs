@@ -1,6 +1,6 @@
 namespace F1Data.Models;
 
-public class CircuitData
+public class Data
 {
     public MRData? MRData { get; set; }
 }

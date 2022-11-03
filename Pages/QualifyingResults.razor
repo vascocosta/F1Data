@@ -110,7 +110,7 @@ else
         try
         {
             var qualifyingUrl = $"{baseUrl}/{year}/{round}/qualifying.json";
-            var qualifyingData = await Http.GetFromJsonAsync<QualifyingData>(qualifyingUrl);
+            var qualifyingData = await Http.GetFromJsonAsync<Data>(qualifyingUrl);
             if (qualifyingData?.MRData?.RaceTable?.Races?.Count > 0)
             {
                 qualifyingResults = qualifyingData?.MRData?.RaceTable?.Races?[0]?.QualifyingResults;
@@ -147,11 +147,11 @@ else
         {
             var seasonUrl = $"{baseUrl}/{year}.json";
             var qualifyingUrl = $"{baseUrl}/{year}/last/qualifying.json";
-            tasks.Add(Http.GetFromJsonAsync<SeasonData>(seasonUrl));
-            tasks.Add(Http.GetFromJsonAsync<QualifyingData>(qualifyingUrl));
+            tasks.Add(Http.GetFromJsonAsync<Data>(seasonUrl));
+            tasks.Add(Http.GetFromJsonAsync<Data>(qualifyingUrl));
             await Task.WhenAll(tasks);
-            var seasonData = ((Task<SeasonData>)tasks[0]).Result;
-            var qualifyingData = ((Task<QualifyingData>)tasks[1]).Result;
+            var seasonData = ((Task<Data>)tasks[0]).Result;
+            var qualifyingData = ((Task<Data>)tasks[1]).Result;
             if (qualifyingData.MRData?.RaceTable?.Races?.Count > 0)
             {
                 qualifyingResults = qualifyingData?.MRData?.RaceTable?.Races?[0]?.QualifyingResults;

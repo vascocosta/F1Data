@@ -145,7 +145,7 @@ else
         try
         {
             var constructorStandingsUrl = $"{baseUrl}/{year}/last/constructorStandings.json";
-            var constructorStandingsData = await Http.GetFromJsonAsync<ConstructorStandingsData>(constructorStandingsUrl);
+            var constructorStandingsData = await Http.GetFromJsonAsync<Data>(constructorStandingsUrl);
             if (constructorStandingsData?.MRData?.StandingsTable?.StandingsLists?.Count > 0)
             {
                 constructorStandings = constructorStandingsData?.MRData?.StandingsTable?.StandingsLists?[0]?.ConstructorStandings;
@@ -161,12 +161,12 @@ else
                 List<Task> tasks = new List<Task>();
                 for (int i = 1; i != Convert.ToInt32(constructorStandingsData?.MRData?.StandingsTable?.round) + 1; i++)
                 {
-                    tasks.Add(Http.GetFromJsonAsync<ConstructorStandingsData>($"{baseUrl}/{year}/{i}/constructorStandings.json"));
+                    tasks.Add(Http.GetFromJsonAsync<Data>($"{baseUrl}/{year}/{i}/constructorStandings.json"));
                 }
                 await Task.WhenAll(tasks);
                 for (int i = 0; i != tasks.Count; i++)
                 {
-                    var raceStandingsData = ((Task<ConstructorStandingsData>)tasks[i]).Result;
+                    var raceStandingsData = ((Task<Data>)tasks[i]).Result;
                     if (raceStandingsData?.MRData?.StandingsTable?.StandingsLists?.Count > 0)
                     {
                         raceStandings.Add(raceStandingsData?.MRData?.StandingsTable?.StandingsLists?[0]?.ConstructorStandings);

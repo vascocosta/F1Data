@@ -61,7 +61,7 @@ else
         try
         {
             var circuitsUrl = $"{baseUrl}/circuits.json?limit=100";
-            var circuitData = await Http.GetFromJsonAsync<CircuitData>(circuitsUrl);
+            var circuitData = await Http.GetFromJsonAsync<Data>(circuitsUrl);
             circuits = circuitData?.MRData?.CircuitTable?.Circuits;
         }
         catch (HttpRequestException)
