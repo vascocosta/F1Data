@@ -8,7 +8,7 @@ Developed as a SPA using [Blazor](https://dotnet.microsoft.com/en-us/apps/aspnet
 
 ![Desktop](https://i.imgur.com/oHXVsUb.png)
 
-![Mobile](https://i.imgur.com/7wWILhg.jpg)
+![Mobile](https://i.imgur.com/Ve26TQG.jpg)
 
 # Features
 
