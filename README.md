@@ -1,6 +1,14 @@
+# F1Data
+
 Web app providing a simple and clean, yet comprehensive, interface to all sorts of Formula 1 data.
 
 Developed as a SPA using [Blazor](https://dotnet.microsoft.com/en-us/apps/aspnet/web-apps/blazor), a free and open-source web framework from Microsoft that enables developers to create web apps using C# and HTML, leveraging web assemly, the future of the web.
+
+## Screenshots
+
+![Desktop](https://i.imgur.com/oHXVsUb.png)
+
+![Mobile](https://i.imgur.com/UfXTQ0B.jpg)
 
 # Features
 
