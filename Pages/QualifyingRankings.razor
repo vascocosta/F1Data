@@ -2,7 +2,13 @@
 @using F1Data.Models
 @inject HttpClient Http
 
-@if (qualifyingScores == null && apiError == false)
+<PageTitle>Qualifying Rankings</PageTitle>
+
+@if ((qualifyingScores == null ||
+     qualifyingQ1Scores == null ||
+     qualifyingQ2Scores == null ||
+     qualifyingQ3Scores == null) &&
+     apiError == false)
 {
     <p><em>Calculating driver scores...</em></p>
 }
@@ -99,7 +105,7 @@ else
     private List<List<QualifyingResult>?>? allQualifyingResults;
     private int totalRaces;
     //private List<QualifyingScores>? qualifyingScores;
-    private IEnumerable<F1Data.Models.QualifyingScores>? qualifyingScores;
+    private IEnumerable<QualifyingScores>? qualifyingScores;
     private List<QualifyingScores>? qualifyingQ1Scores;
     private List<QualifyingScores>? qualifyingQ2Scores;
     private List<QualifyingScores>? qualifyingQ3Scores;
@@ -117,14 +123,8 @@ else
         }
         else if (e.Value != null)
         {
-            try
-            {
-                year = (string)e.Value;
-            }
-            catch (InvalidCastException)
-            {
-            }
-        }
+            year = (string)e.Value;
+        }        
         try
         {
             var racesUrl = $"{baseUrl}/{year}/last/qualifying.json";
@@ -247,10 +247,17 @@ else
                     Q2Score = Math.Round(200 - driver.Value.Q2.Average(), 3),
                     Q3Score = Math.Round(200 - driver.Value.Q3.Average(), 3),
                 });
-            //.OrderByDescending(driver => driver.Q3Score)
-            //.ToList();
-        qualifyingQ1Scores = qualifyingScores.OrderByDescending(driver => driver.Q1Score).ToList();
-        qualifyingQ2Scores = qualifyingScores.OrderByDescending(driver => driver.Q2Score).ToList();
-        qualifyingQ3Scores = qualifyingScores.OrderByDescending(driver => driver.Q3Score).ToList();
+        qualifyingQ1Scores =
+            qualifyingScores
+            .OrderByDescending(driver => driver.Q1Score)
+            .ToList();
+        qualifyingQ2Scores =
+            qualifyingScores
+            .OrderByDescending(driver => driver.Q2Score)
+            .ToList();
+        qualifyingQ3Scores =
+            qualifyingScores
+            .OrderByDescending(driver => driver.Q3Score)
+            .ToList();
     }
 }
