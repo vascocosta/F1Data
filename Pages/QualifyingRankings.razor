@@ -1,0 +1,256 @@
+@page "/qualifyingrankings"
+@using F1Data.Models
+@inject HttpClient Http
+
+@if (qualifyingScores == null && apiError == false)
+{
+    <p><em>Calculating driver scores...</em></p>
+}
+else if (apiError == true)
+{
+    <p><em>@errorMessage</em></p>
+    <a href="driverstandings">retry</a>
+}
+else
+{
+    <form>
+        <select class="form-select" @onchange="ChangeYear">
+            @for (int i = 2022; i >= 2006; i--)
+            {
+                <option value="@i">@i</option>    
+            }
+        </select>
+    </form>
+    <br>
+    <h4>Q3 Ranking</h4>
+    <table class="table table-sm table-striped">
+        <thead>
+            <tr>
+                <th>Pos</th>
+                <th>Driver</th>
+                <th>Team</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i != qualifyingQ3Scores!.Count; i++)
+            {
+                <tr>
+                    <td>@(i+1)</td>
+                    <td>@qualifyingQ3Scores[i].GivenName @qualifyingQ3Scores[i].FamilyName</td>
+                    <td>@qualifyingQ3Scores[i].Constructor</td>
+                    <td>@qualifyingQ3Scores[i].Q3Score</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <h4>Q2 Ranking</h4>
+    <table class="table table-sm table-striped">
+        <thead>
+            <tr>
+                <th>Pos</th>
+                <th>Driver</th>
+                <th>Team</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i != qualifyingQ2Scores!.Count; i++)
+            {
+                <tr>
+                    <td>@(i+1)</td>
+                    <td>@qualifyingQ2Scores[i].GivenName @qualifyingQ2Scores[i].FamilyName</td>
+                    <td>@qualifyingQ2Scores[i].Constructor</td>
+                    <td>@qualifyingQ2Scores[i].Q2Score</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <h4>Q1 Ranking</h4>
+    <table class="table table-sm table-striped">
+        <thead>
+            <tr>
+                <th>Pos</th>
+                <th>Driver</th>
+                <th>Team</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i != qualifyingQ1Scores!.Count; i++)
+            {
+                <tr>
+                    <td>@(i+1)</td>
+                    <td>@qualifyingQ1Scores[i].GivenName @qualifyingQ1Scores[i].FamilyName</td>
+                    <td>@qualifyingQ1Scores[i].Constructor</td>
+                    <td>@qualifyingQ1Scores[i].Q1Score</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private bool apiError = false;
+    private string baseUrl = "https://ergast.com/api/f1";
+    private string? errorMessage;
+    private string?year = "2022";
+    private List<QualifyingResult>? qualifyingResults;
+    private List<List<QualifyingResult>?>? allQualifyingResults;
+    private int totalRaces;
+    //private List<QualifyingScores>? qualifyingScores;
+    private IEnumerable<F1Data.Models.QualifyingScores>? qualifyingScores;
+    private List<QualifyingScores>? qualifyingQ1Scores;
+    private List<QualifyingScores>? qualifyingQ2Scores;
+    private List<QualifyingScores>? qualifyingQ3Scores;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ChangeYear(new ChangeEventArgs());
+    }
+
+    private async Task ChangeYear(ChangeEventArgs e)
+    {
+        if (e == null)
+        {
+            year = "2022";
+        }
+        else if (e.Value != null)
+        {
+            try
+            {
+                year = (string)e.Value;
+            }
+            catch (InvalidCastException)
+            {
+            }
+        }
+        try
+        {
+            var racesUrl = $"{baseUrl}/{year}/last/qualifying.json";
+            var races = await Http.GetFromJsonAsync<Data>(racesUrl);
+            totalRaces = Convert.ToInt32(races?.MRData?.total ?? "0");
+            allQualifyingResults = new();
+            List<Task> tasks = new();
+            for (int i = 0; i != totalRaces; i++)
+            {
+                var qualifyingUrl = $"{baseUrl}/{year}/{i+1}/qualifying.json";
+                tasks.Add(Http.GetFromJsonAsync<Data>(qualifyingUrl));
+            }
+            await Task.WhenAll(tasks);
+            for (int i = 0; i != tasks.Count; i++)
+            {
+                var qualifyingData = ((Task<Data>)tasks[i]).Result;
+                if (qualifyingData.MRData?.RaceTable?.Races?.Count > 0)
+                {
+                    qualifyingResults = qualifyingData.MRData.RaceTable.Races[0].QualifyingResults;
+                    allQualifyingResults.Add(qualifyingResults);
+                }
+                else
+                {
+                    qualifyingResults = new List<QualifyingResult>();
+                }
+            }
+        }
+        catch (HttpRequestException)
+        {
+            apiError = true;
+            errorMessage = "Problem fetching data.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            apiError = true;
+            errorMessage = "Problem parsing data.";
+        }
+        Dictionary<string, QualifyingScores> qualifyingStats = new();
+        if (allQualifyingResults != null)
+        {
+            foreach (var race in allQualifyingResults)
+            {
+                if (race != null)
+                {
+                    foreach (var result in race)
+                    {
+                        TimeSpan q1, q2, q3;
+                        if (result.Q1 == null)
+                        {
+                            q1 = new TimeSpan(0, 2, 0);
+                        }
+                        try
+                        {
+                            q1 = TimeSpan.Parse($"00:{result.Q1}");
+                        }
+                        catch (FormatException)
+                        {
+                            q1 = new TimeSpan(0, 2, 0);
+                        }
+                        if (result.Q2 == null)
+                        {
+                            q2 = new TimeSpan(0, 2, 0);
+                        }
+                        try
+                        {
+                            q2 = TimeSpan.Parse($"00:{result.Q2}");
+                        }
+                        catch (FormatException)
+                        {
+                            q2 = new TimeSpan(0, 2, 0);
+                        }
+                        if (result.Q3 == null)
+                        {
+                            q3 = new TimeSpan(0, 2, 0);
+                        }
+                        try
+                        {
+                            q3 = TimeSpan.Parse($"00:{result.Q3}");
+                        }
+                        catch (FormatException)
+                        {
+                            q3 = new TimeSpan(0, 2, 0);
+                        }
+                        if (result.Driver?.code != null)
+                        {
+                            if (qualifyingStats.ContainsKey(result.Driver.code))
+                            {
+                                qualifyingStats[result.Driver.code].Q1.Add(q1.TotalSeconds);
+                                qualifyingStats[result.Driver.code].Q2.Add(q2.TotalSeconds);
+                                qualifyingStats[result.Driver.code].Q3.Add(q3.TotalSeconds);
+                            }
+                            else
+                            {
+                                qualifyingStats[result.Driver.code] = new QualifyingScores();
+                                qualifyingStats[result.Driver.code].GivenName = result.Driver.givenName;
+                                qualifyingStats[result.Driver.code].FamilyName = result.Driver.familyName;
+                                qualifyingStats[result.Driver.code].Constructor = result.Constructor?.name;
+                                qualifyingStats[result.Driver.code].Q1 = new List<double>();
+                                qualifyingStats[result.Driver.code].Q1.Add(q1.TotalSeconds);
+                                qualifyingStats[result.Driver.code].Q2 = new List<double>();
+                                qualifyingStats[result.Driver.code].Q2.Add(q2.TotalSeconds);
+                                qualifyingStats[result.Driver.code].Q3 = new List<double>();
+                                qualifyingStats[result.Driver.code].Q3.Add(q3.TotalSeconds);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        qualifyingScores =
+            qualifyingStats
+            .Where(driver => driver.Value.Q1.Count >= totalRaces / 2)
+            .Select(driver =>
+                new QualifyingScores {
+                    Code = driver.Key,
+                    GivenName = driver.Value.GivenName,
+                    FamilyName = driver.Value.FamilyName,
+                    Constructor = driver.Value.Constructor,
+                    Q1Score = Math.Round(200 - driver.Value.Q1.Average(), 3),
+                    Q2Score = Math.Round(200 - driver.Value.Q2.Average(), 3),
+                    Q3Score = Math.Round(200 - driver.Value.Q3.Average(), 3),
+                });
+            //.OrderByDescending(driver => driver.Q3Score)
+            //.ToList();
+        qualifyingQ1Scores = qualifyingScores.OrderByDescending(driver => driver.Q1Score).ToList();
+        qualifyingQ2Scores = qualifyingScores.OrderByDescending(driver => driver.Q2Score).ToList();
+        qualifyingQ3Scores = qualifyingScores.OrderByDescending(driver => driver.Q3Score).ToList();
+    }
+}
