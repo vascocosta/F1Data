@@ -1,6 +1,7 @@
 @page "/constructorstandings"
 @using F1Data.Models
 @inject HttpClient Http
+@inject IJSRuntime JS
 
 <PageTitle>Constructor Standings</PageTitle>
 
@@ -118,6 +119,26 @@ else
         await ChangeYear(new ChangeEventArgs());
     }
 
+    private async Task WriteCache<T>(string key, T value)
+    {
+        await JS.InvokeVoidAsync("localStorage.setItem", key,  JsonSerializer.Serialize(value));
+    }
+
+    private async Task<T?> ReadCache<T>(string key)
+    {
+        T? result;
+        var raceStandingsJson = await JS.InvokeAsync<string>("localStorage.getItem", key);
+        try
+        {
+            result = JsonSerializer.Deserialize<T>(raceStandingsJson);
+            return result;
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+
     private async Task ChangeYear(ChangeEventArgs e)
     {
         if (e == null)
@@ -158,19 +179,37 @@ else
             if (raceByRace)
             {
                 raceStandings = new();
-                List<Task> tasks = new List<Task>();
-                for (int i = 1; i != Convert.ToInt32(constructorStandingsData?.MRData?.StandingsTable?.round) + 1; i++)
+                var cached = true;
+                try
                 {
-                    tasks.Add(Http.GetFromJsonAsync<Data>($"{baseUrl}/{year}/{i}/constructorStandings.json"));
+                    raceStandings = await ReadCache<List<List<ConstructorStanding>?>?>($"ConstructorStandings_raceStandings_{year}");
                 }
-                await Task.WhenAll(tasks);
-                for (int i = 0; i != tasks.Count; i++)
+                catch (Exception)
                 {
-                    var raceStandingsData = ((Task<Data>)tasks[i]).Result;
-                    if (raceStandingsData?.MRData?.StandingsTable?.StandingsLists?.Count > 0)
+                    cached = false;
+                }
+                if (raceStandings == null)
+                {
+                    cached = false;
+                }
+                if (!cached)
+                {
+                    List<Task> tasks = new List<Task>();
+                    for (int i = 1; i != Convert.ToInt32(constructorStandingsData?.MRData?.StandingsTable?.round) + 1; i++)
                     {
-                        raceStandings.Add(raceStandingsData?.MRData?.StandingsTable?.StandingsLists?[0]?.ConstructorStandings);
+                        tasks.Add(Http.GetFromJsonAsync<Data>($"{baseUrl}/{year}/{i}/constructorStandings.json"));
                     }
+                    await Task.WhenAll(tasks);
+                    for (int i = 0; i != tasks.Count; i++)
+                    {
+                        var raceStandingsData = ((Task<Data>)tasks[i]).Result;
+                        if (raceStandingsData?.MRData?.StandingsTable?.StandingsLists?.Count > 0)
+                        {
+                            raceStandings.Add(raceStandingsData?.MRData?.StandingsTable?.StandingsLists?[0]?.ConstructorStandings);
+                        }
+                    }
+                    if (year != DateTime.Now.Year.ToString())
+                        await WriteCache<List<List<ConstructorStanding>?>?>($"ConstructorStandings_raceStandings_{year}", raceStandings);
                 }
                 string datasetsString = String.Empty;
                 Dictionary<string, string> datasets = new();
