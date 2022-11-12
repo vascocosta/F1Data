@@ -1,7 +1,8 @@
 @page "/constructorstandings"
 @using F1Data.Models
+@using F1Data.Helpers
 @inject HttpClient Http
-@inject IJSRuntime JS
+@inherits Cache
 
 <PageTitle>Constructor Standings</PageTitle>
 
@@ -118,7 +119,7 @@ else
 
         await ChangeYear(new ChangeEventArgs());
     }
-
+/*
     private async Task WriteCache<T>(string key, T value)
     {
         await JS.InvokeVoidAsync("localStorage.setItem", key,  JsonSerializer.Serialize(value));
@@ -138,7 +139,7 @@ else
             throw;
         }
     }
-
+*/
     private async Task ChangeYear(ChangeEventArgs e)
     {
         if (e == null)
@@ -205,125 +206,128 @@ else
                         var raceStandingsData = ((Task<Data>)tasks[i]).Result;
                         if (raceStandingsData?.MRData?.StandingsTable?.StandingsLists?.Count > 0)
                         {
-                            raceStandings.Add(raceStandingsData?.MRData?.StandingsTable?.StandingsLists?[0]?.ConstructorStandings);
+                            raceStandings?.Add(raceStandingsData?.MRData?.StandingsTable?.StandingsLists?[0]?.ConstructorStandings);
                         }
                     }
                     if (year != DateTime.Now.Year.ToString())
                         await WriteCache<List<List<ConstructorStanding>?>?>($"ConstructorStandings_raceStandings_{year}", raceStandings);
                 }
-                string datasetsString = String.Empty;
-                Dictionary<string, string> datasets = new();
-                foreach (var raceStanding in raceStandings)
+                if (raceStandings != null)
                 {
-                    if (raceStanding != null) {
-                        foreach (var constructorStanding in raceStanding)
-                        {
-                            var name = constructorStanding.Constructor?.name;
-                            var points = constructorStanding.points;
-                            var color = String.Empty;
-                            var datasetString = "{fill:false,";
-                            if (name != null && points != null)
+                    string datasetsString = String.Empty;
+                    Dictionary<string, string> datasets = new();
+                    foreach (var raceStanding in raceStandings)
+                    {
+                        if (raceStanding != null) {
+                            foreach (var constructorStanding in raceStanding)
                             {
-                                if (datasets.ContainsKey(name))
+                                var name = constructorStanding.Constructor?.name;
+                                var points = constructorStanding.points;
+                                var color = String.Empty;
+                                var datasetString = "{fill:false,";
+                                if (name != null && points != null)
                                 {
-                                    datasets[name] += points + ",";
-                                }
-                                else
-                                {
-                                    switch (name.ToLowerInvariant())
+                                    if (datasets.ContainsKey(name))
                                     {
-                                        case "ferrari":
-                                        color = "#FF2800";
-                                        break;
-                                        case "mercedes":
-                                        color = "#00D2BE";
-                                        break;
-                                        case "red bull":
-                                        color = "#0600EF";
-                                        break;
-                                        case "mclaren":
-                                        color = "#FF8700";
-                                        break;
-                                        case "williams":
-                                        color = "#005AFF";
-                                        break;
-                                        case "alpine f1 team":
-                                        color = "#0090FF";
-                                        break;
-                                        case "haas f1 team":
-                                        color = "#CCCCCC";
-                                        break;
-                                        case "aston martin":
-                                        color = "#006F62";
-                                        break;
-                                        case "alphatauri":
-                                        case "toro rosso":
-                                        color = "#2B4562";
-                                        break;
-                                        case "alfa romeo":
-                                        color = "#900000";
-                                        break;
-                                        case "renault":
-                                        color = "#FFE100";
-                                        break;
-                                        case "racing point":
-                                        color = "#FA96FF";
-                                        break;
-                                        case "force india":
-                                        color = "#19BF00";
-                                        break;
-                                        case "jaguar":
-                                        case "lotus":
-                                        case "lotus f1":
-                                        color = "#004225";
-                                        break;
-                                        case "sauber":
-                                        color = "#C70000";
-                                        break;
-                                        case "brawn":
-                                        color = "#FAFF41";
-                                        break;
-                                        case "toyota":
-                                        color = "#EB0A1E";
-                                        break;
-                                        case "bmw sauber":
-                                        color = "#0950A0";
-                                        break;
-                                        case "benetton":
-                                        color = "#60B3e0";
-                                        break;
-                                        case "jordan":
-                                        color = "#FFF130";
-                                        break;
-                                        case "bar":
-                                        case "honda":
-                                        color = "#CC0000";
-                                        break;
+                                        datasets[name] += points + ",";
                                     }
-                                    if (!String.IsNullOrEmpty(color))
+                                    else
                                     {
-                                        datasetString += $"borderColor:\'{color}\',";
+                                        switch (name.ToLowerInvariant())
+                                        {
+                                            case "ferrari":
+                                            color = "#FF2800";
+                                            break;
+                                            case "mercedes":
+                                            color = "#00D2BE";
+                                            break;
+                                            case "red bull":
+                                            color = "#0600EF";
+                                            break;
+                                            case "mclaren":
+                                            color = "#FF8700";
+                                            break;
+                                            case "williams":
+                                            color = "#005AFF";
+                                            break;
+                                            case "alpine f1 team":
+                                            color = "#0090FF";
+                                            break;
+                                            case "haas f1 team":
+                                            color = "#CCCCCC";
+                                            break;
+                                            case "aston martin":
+                                            color = "#006F62";
+                                            break;
+                                            case "alphatauri":
+                                            case "toro rosso":
+                                            color = "#2B4562";
+                                            break;
+                                            case "alfa romeo":
+                                            color = "#900000";
+                                            break;
+                                            case "renault":
+                                            color = "#FFE100";
+                                            break;
+                                            case "racing point":
+                                            color = "#FA96FF";
+                                            break;
+                                            case "force india":
+                                            color = "#19BF00";
+                                            break;
+                                            case "jaguar":
+                                            case "lotus":
+                                            case "lotus f1":
+                                            color = "#004225";
+                                            break;
+                                            case "sauber":
+                                            color = "#C70000";
+                                            break;
+                                            case "brawn":
+                                            color = "#FAFF41";
+                                            break;
+                                            case "toyota":
+                                            color = "#EB0A1E";
+                                            break;
+                                            case "bmw sauber":
+                                            color = "#0950A0";
+                                            break;
+                                            case "benetton":
+                                            color = "#60B3e0";
+                                            break;
+                                            case "jordan":
+                                            color = "#FFF130";
+                                            break;
+                                            case "bar":
+                                            case "honda":
+                                            color = "#CC0000";
+                                            break;
+                                        }
+                                        if (!String.IsNullOrEmpty(color))
+                                        {
+                                            datasetString += $"borderColor:\'{color}\',";
+                                        }
+                                        datasets.Add(name, datasetString + $"label:'{name}',data:[{points},");
                                     }
-                                    datasets.Add(name, datasetString + $"label:'{name}',data:[{points},");
                                 }
                             }
                         }
                     }
+                    foreach (KeyValuePair<string, string> kvp in datasets)
+                    {
+                        datasets[kvp.Key] += "],},";
+                    }
+                    foreach (KeyValuePair<string, string> kvp in datasets)
+                    {
+                        datasetsString += kvp.Value;
+                    }
+                    string xString = String.Empty;
+                    for (int i = 0; i != raceStandings.Count; i++)
+                    {
+                        xString += $"'R{i+1}',";
+                    }
+                    chartUrl = HttpUtility.UrlEncode($"{{type:'line',data:{{labels:[{xString}],datasets:[{datasetsString}]}}}}");
                 }
-                foreach (KeyValuePair<string, string> kvp in datasets)
-                {
-                    datasets[kvp.Key] += "],},";
-                }
-                foreach (KeyValuePair<string, string> kvp in datasets)
-                {
-                    datasetsString += kvp.Value;
-                }
-                string xString = String.Empty;
-                for (int i = 0; i != raceStandings.Count; i++)
-                {
-                    xString += $"'R{i+1}',";
-                }
-                chartUrl = HttpUtility.UrlEncode($"{{type:'line',data:{{labels:[{xString}],datasets:[{datasetsString}]}}}}");
             }
         }
         catch (HttpRequestException)
