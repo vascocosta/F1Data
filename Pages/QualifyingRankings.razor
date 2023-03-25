@@ -1,6 +1,8 @@
 @page "/qualifyingrankings"
 @using F1Data.Models
+@using F1Data.Helpers
 @inject HttpClient Http
+@inherits Cache
 
 <PageTitle>Qualifying Rankings</PageTitle>
 
@@ -100,11 +102,10 @@ else
     private bool apiError = false;
     private string baseUrl = "https://ergast.com/api/f1";
     private string? errorMessage;
-    private string?year = "2022";
+    private string? year = "2022";
     private List<QualifyingResult>? qualifyingResults;
     private List<List<QualifyingResult>?>? allQualifyingResults;
     private int totalRaces;
-    //private List<QualifyingScores>? qualifyingScores;
     private IEnumerable<QualifyingScores>? qualifyingScores;
     private List<QualifyingScores>? qualifyingQ1Scores;
     private List<QualifyingScores>? qualifyingQ2Scores;
@@ -131,25 +132,43 @@ else
             var races = await Http.GetFromJsonAsync<Data>(racesUrl);
             totalRaces = Convert.ToInt32(races?.MRData?.total ?? "0");
             allQualifyingResults = new();
-            List<Task> tasks = new();
-            for (int i = 0; i != totalRaces; i++)
+            var cached = true;
+            try
             {
-                var qualifyingUrl = $"{baseUrl}/{year}/{i+1}/qualifying.json";
-                tasks.Add(Http.GetFromJsonAsync<Data>(qualifyingUrl));
+                allQualifyingResults = await ReadCache<List<List<QualifyingResult>?>?>($"QualifyingRankings_allQualifyingResults_{year}");
             }
-            await Task.WhenAll(tasks);
-            for (int i = 0; i != tasks.Count; i++)
+            catch (Exception)
             {
-                var qualifyingData = ((Task<Data>)tasks[i]).Result;
-                if (qualifyingData.MRData?.RaceTable?.Races?.Count > 0)
+                cached = false;
+            }
+            if (allQualifyingResults == null)
+            {
+                cached = false;
+            }
+            if (!cached)
+            {
+                List<Task> tasks = new();
+                for (int i = 0; i != totalRaces; i++)
                 {
-                    qualifyingResults = qualifyingData.MRData.RaceTable.Races[0].QualifyingResults;
-                    allQualifyingResults.Add(qualifyingResults);
+                    var qualifyingUrl = $"{baseUrl}/{year}/{i+1}/qualifying.json";
+                    tasks.Add(Http.GetFromJsonAsync<Data>(qualifyingUrl));
                 }
-                else
+                await Task.WhenAll(tasks);
+                for (int i = 0; i != tasks.Count; i++)
                 {
-                    qualifyingResults = new List<QualifyingResult>();
+                    var qualifyingData = ((Task<Data>)tasks[i]).Result;
+                    if (qualifyingData.MRData?.RaceTable?.Races?.Count > 0)
+                    {
+                        qualifyingResults = qualifyingData.MRData.RaceTable.Races[0].QualifyingResults;
+                        allQualifyingResults?.Add(qualifyingResults);
+                    }
+                    else
+                    {
+                        qualifyingResults = new List<QualifyingResult>();
+                    }
                 }
+                if (year != DateTime.Now.Year.ToString())
+                    await WriteCache<List<List<QualifyingResult>?>?>($"QualifyingRankings_allQualifyingResults_{year}", allQualifyingResults);
             }
         }
         catch (HttpRequestException)
